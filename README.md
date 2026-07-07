@@ -1,2 +1,1 @@
-# pragati
-pragati
+python app.py

@@ -1,0 +1,1185 @@
+{% extends "base.html" %}
+{% set hide_nav_title = True %}
+{% block title %}Complete Profile{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #f5f6fa;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)), url("{{ url_for('static', filename='health_bg.png') }}");
+    background-repeat: repeat;
+    background-size: 400px;
+    background-attachment: fixed;
+  }
+  .form-card {
+    max-width: 600px;
+    margin: 2rem auto; /* added 2rem margin top/bottom instead of 0 auto to show more wallpaper */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  .card-header h4 {
+    color: white;
+    margin: 0;
+    padding: 0.5rem;
+  }
+  input[readonly]:not(.flatpickr-input), 
+  input[disabled],
+  input[readonly] + .flatpickr-input,
+  input[disabled] + .flatpickr-input {
+    background-color: #e9ecef !important;
+  }
+  .position-relative { position: relative; }
+  .remove-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #dc3545;
+  }
+  .is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #f8d7da !important;
+  }
+  .is-invalid + .flatpickr-input {
+    border-color: #dc3545 !important;
+    background-color: #f8d7da !important;
+  }
+  @media (max-width: 768px) {
+    .form-card {
+      max-width: 100%;
+      margin: 0 0.5rem;
+    }
+  }
+  @media (max-width: 576px) {
+    .container-fluid {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+    .form-card {
+      margin: 0 0.25rem;
+      box-shadow: none;
+    }
+    .card-header h4 {
+      font-size: 1.1rem;
+    }
+  }
+</style>
+
+<div class="container-fluid px-3">
+  <div class="card mt-0 form-card">
+    <div class="card-header text-center" style="background-color: #042351;">
+      <h4>Complete Your Profile</h4>
+    </div>
+    <div class="card-body">
+      <form method="POST" id="profileForm" novalidate autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- BASIC INFO (Always required) -->
+        <div class="mb-3">
+          <label class="fw-bold">Name</label>
+          <input name="name" class="form-control" value="{{ employee.name }}" pattern="^[A-Za-z\s]+$" title="Only letters and spaces are allowed" {% if not is_admin %}readonly{% endif %} required>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Phone</label>
+          <input name="phone" class="form-control" pattern="\d{10}" maxlength="10" title="Enter exactly 10 digits" value="{{ employee.phone }}" {% if not is_admin %}readonly{% endif %} required>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Employee ID</label>
+          <input name="employee_id" class="form-control" id="employeeCodeInput" value="{{ employee.employee_id }}" type="text" pattern="^\d+$" title="Only digits are allowed"  required {% if readonly %}readonly{% endif %}>
+          <div id="employeeCodeError" class="text-danger mt-1" style="display: none;">Only digits are allowed.</div>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Designation</label>
+          <input name="designation" id="designationInput" class="form-control"
+                pattern="^[A-Za-z\s]+$"
+                title="Only letters and spaces are allowed"
+                value="{{ employee.designation }}"
+                required {% if readonly %}readonly{% endif %}>        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Department</label>
+          <input name="department" id="departmentInput" class="form-control"
+                 pattern="^[A-Za-z\s]+$"
+                  title="Only letters and spaces are allowed"
+                  value="{{ employee.department }}"
+                  required {% if readonly %}readonly{% endif %}>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Personal Email Address</label>
+          <input name="email" type="email" class="form-control" value="{{ employee.email }}" pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" title="Please enter a valid email address (e.g. user@example.com)" required {% if readonly %}readonly{% endif %}>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Date of Joining</label>
+          <input name="date_of_joining" type="date" class="form-control" id="joiningDate" min="1935-01-01" max="{{current_date}}" value="{{ employee.date_of_joining }}" required {% if readonly %}readonly{% endif %}>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Date of Birth</label>
+          <input name="dob" type="date" class="form-control" id="emp_dob" min="1935-01-01" value="{{ employee.dob }}" required {% if readonly %}readonly{% endif %}>
+          <div id="emp-dob-error" class="text-danger" style="display: none;">Must be at least 18 years old.</div>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Age</label>
+          <input name="age" class="form-control" readonly value="{{ employee.age }}">
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Gender</label>
+          <select name="gender" id="emp_gender" class="form-control" required {% if readonly %}disabled{% endif %}>
+            <option value="">-- Select --</option>
+            <option value="Male"   {% if employee.gender=='Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if employee.gender=='Female' %}selected{% endif %}>Female</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="fw-bold">Marital Status</label>
+          <select name="marital_status" id="marital_status" class="form-control" onchange="toggleFamilyFields()" required {% if readonly %}disabled{% endif %}>
+            <option value="">-- Select --</option>
+            <option value="unmarried" {% if employee.marital_status=='unmarried' %}selected{% endif %}>Unmarried</option>
+            <option value="married" {% if employee.marital_status=='married' %}selected{% endif %}>Married</option>
+            <option value="divorced/widowed" {% if employee.marital_status=='divorced/widowed' %}selected{% endif %}>Divorced/Widowed</option>
+          </select>
+        </div>
+
+        <!-- SPOUSE SECTION -->
+        <div id="spouseSection" style="display:none;">
+          <h5>Spouse Details</h5>
+          <div class="mb-3">
+            <label class="fw-bold">
+              Name <span class="aadhaar-blink">(as per AADHAAR)</span>
+            </label>
+            <input name="spouse_name" class="form-control" pattern="^[A-Za-z\s]+$"  title="Only letters and spaces are allowed" value="{{ employee.spouse.name }}">
+          </div>  
+          <div class="mb-3">
+            <label class="fw-bold">Date of Birth</label>
+            <input name="spouse_dob" type="date" id="spouse_dob" class="form-control" value="{{ employee.spouse.date_of_birth }}" min="1935-01-01">
+            <div id="spouse-dob-error" class="text-danger" style="display: none;">Must be at least 18 years old.</div>
+          </div>
+          <div class="mb-3">
+            <label class="fw-bold">Age</label>
+            <input name="spouse_age" class="form-control" readonly value="{{ employee.spouse.age }}">
+          </div>
+          <div class="mb-3">
+            <label class="fw-bold">Gender</label>
+            <select name="spouse_gender" id="spouse_gender" class="form-control">
+              <option value="">-- Select --</option>
+              <option value="Male"   {% if employee.spouse.gender=='Male' %}selected{% endif %}>Male</option>
+              <option value="Female" {% if employee.spouse.gender=='Female' %}selected{% endif %}>Female</option>
+              <option value="Other"  {% if employee.spouse.gender=='Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+        </div>
+         
+        <!-- CHILDREN SECTION -->
+        <div id="childrenSection" style="display:none;">
+          <h5>Children</h5>
+          <div id="childrenList">
+            {% for child in employee.children %}
+            <div class="position-relative mb-3 child-entry">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="fw-bold mb-0">Child {{ loop.index }}</label>
+                <button type="button" class="remove-btn" {% if readonly %}disabled{% endif %}>🗑️</button>
+              </div>
+              
+              <label class="fw-bold">
+                Name <span class="aadhaar-blink">(as per AADHAAR)</span>
+              </label>
+              <input name="child_name_{{ loop.index0 }}" class="form-control mb-2" pattern="^[A-Za-z\s]+$" title="Only letters and spaces are allowed" value="{{ child.name }}" placeholder="Name">
+              <label class="fw-bold">Date of Birth</label>
+              <input name="child_dob_{{ loop.index0 }}" type="date" class="form-control mb-2" value="{{ child.date_of_birth }}" min="1935-01-01" max="{{current_date}}">
+              <label class="fw-bold">Age</label>
+              <input name="child_age_{{ loop.index0 }}" class="form-control mb-2" value="{{ child.age }}" placeholder="Age" readonly>
+              <label class="fw-bold">Gender</label>
+              <select name="child_gender_{{ loop.index0 }}" class="form-control mb-2">
+                <option value="">-- Select --</option>
+                <option value="Male" {% if child.gender=='Male' %}selected{% endif %}>Male</option>
+                <option value="Female" {% if child.gender=='Female' %}selected{% endif %}>Female</option>
+                <option value="Other" {% if child.gender=='Other' %}selected{% endif %}>Other</option>
+              </select>
+            </div>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="total_children" id="total_children" value="{{ employee.children|length }}">
+          <button type="button" class="btn btn-secondary btn-sm mt-1" id="addChildBtn" onclick="addChild()" {% if readonly %}disabled{% endif %}>Add Child</button>
+        </div>
+
+
+        <!-- PARENTS SECTION (always shown) -->
+        <div id="parentSection" style="display:block; margin-top:1rem;">
+         <!--<h5>Parent Details</h5> --> 
+          <div id="parentList">
+            {% for parent in employee.parents %}
+            <div class="position-relative mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="fw-bold mb-0">{{ parent.relationship }}</label>
+                {% if is_admin %}
+                <button type="button" class="remove-btn" onclick="removeParent(this, '{{ parent.relationship }}')" disabled>🗑️</button>
+                {% endif %}
+              </div>
+              <input type="hidden" name="parent_relationship_{{ loop.index0 }}" value="{{ parent.relationship }}">
+              <input name="parent_name_{{ loop.index0 }}" class="form-control mb-2" value="{{ parent.name }}" placeholder="Name" readonly>
+              <input name="parent_dob_{{ loop.index0 }}" type="date" class="form-control mb-2" value="{{ parent.date_of_birth }}" readonly>
+              <input name="parent_age_{{ loop.index0 }}" class="form-control" value="{{ parent.age }}" placeholder="Age" readonly>
+            </div>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="total_parents" id="total_parents" value="{{ employee.parents|length }}">
+          <button type="button" id="addParentBtn" class="btn btn-secondary btn-sm" style="pointer-events: none; opacity: 0.6; cursor: not-allowed; display:none;">Add Parent</button>
+        </div>
+
+        <!-- SUBMIT BUTTON -->
+        {% if show_submit %}
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary">
+                Submit Profile
+            </button>
+        </div>
+        {% endif %}
+
+        {% if show_logout %}
+        <div class="text-center mt-4">
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary">Logout</a>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const CHILD_FIELDS = ["child_name_", "child_dob_", "child_gender_"];
+const MIN_DATE = new Date('1935-01-01');
+const isReadonly = {{ 'true' if readonly else 'false' }};
+const blurredFields = new Set();
+
+function getVisibleField(field) {
+  if (field && field._flatpickr && field._flatpickr.altInput) {
+    return field._flatpickr.altInput;
+  }
+  return field;
+}
+
+function calculateAgeString(dobStr) {
+  if (!dobStr) return "";
+  const dob = new Date(dobStr);
+  const today = new Date();
+  if (isNaN(dob.getTime())) return "";
+
+  let years = today.getFullYear() - dob.getFullYear();
+  let months = today.getMonth() - dob.getMonth();
+  let days = today.getDate() - dob.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  if (years === 0) {
+    if (months === 0) {
+      if (days <= 1) {
+        return "Newborn";
+      }
+      return `${days} days`;
+    } else {
+      if (days > 15) {
+        return `${months + 1} months`;
+      }
+      return `${months} months`;
+    }
+  } else if (years === 1 && months === 0 && days === 0) {
+    return "1 year";
+  } else {
+    return `${years} years`;
+  }
+}
+
+function getNumericAge(dobStr) {
+  if (!dobStr) return 0;
+  const dob = new Date(dobStr);
+  const today = new Date();
+  if (isNaN(dob.getTime())) return 0;
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+function setFieldValidity(field, message, isValid, showInvalidStyle) {
+  if (!field) return;
+  field.setCustomValidity(message);
+  const visible = getVisibleField(field);
+  if (visible) {
+    visible.setCustomValidity(message);
+    if (!isValid && showInvalidStyle) {
+      field.classList.add("is-invalid");
+      visible.classList.add("is-invalid");
+    } else {
+      field.classList.remove("is-invalid");
+      visible.classList.remove("is-invalid");
+    }
+  }
+}
+
+function clearChildrenList() {
+  const childrenList = document.getElementById("childrenList");
+  if (childrenList) {
+    const childDobs = childrenList.querySelectorAll("input[name^='child_dob_']");
+    childDobs.forEach(input => {
+      if (input._flatpickr) {
+        input._flatpickr.destroy();
+      }
+    });
+    childrenList.innerHTML = "";
+  }
+  updateChildrenCount();
+}
+
+function setSpouseFieldsEmptyAndRequired(isRequired) {
+  ["spouse_name", "spouse_dob", "spouse_age", "spouse_gender"].forEach(fieldName => {
+    const field = document.querySelector(`[name='${fieldName}']`);
+    if (field) {
+      if (isRequired) {
+        field.setAttribute("required", "required");
+      } else {
+        field.removeAttribute("required");
+        if (fieldName !== "spouse_age") {
+          field.value = "";
+          if (fieldName === "spouse_gender") field.selectedIndex = 0;
+          setFieldValidity(field, "", true, false);
+        } else {
+          field.value = "";
+        }
+      }
+    }
+  });
+  const spouseDobError = document.getElementById("spouse-dob-error");
+  if (spouseDobError) spouseDobError.style.display = "none";
+}
+
+function validateChildrenFields(showErrors, names, errorMessages) {
+  let childrenValid = true;
+  const entries = document.querySelectorAll("#childrenList .child-entry");
+  entries.forEach((entry, idx) => {
+    const nameInput = entry.querySelector(`input[name='child_name_${idx}']`);
+    if (nameInput) {
+      nameInput.setAttribute("required", "required");
+      const val = nameInput.value.trim();
+      const showInvalidStyle = showErrors || blurredFields.has(nameInput);
+      if (!val) {
+        setFieldValidity(nameInput, `Child ${idx + 1} Name is required.`, false, showInvalidStyle);
+        if (showErrors) errorMessages.push(`Child ${idx + 1} Name is required.`);
+        childrenValid = false;
+      } else if (!/^[A-Za-z\s]+$/.test(val)) {
+        setFieldValidity(nameInput, `Only letters and spaces allowed for Child ${idx + 1} Name.`, false, true);
+        errorMessages.push(`Only letters and spaces allowed for Child ${idx + 1} Name.`);
+        childrenValid = false;
+      } else if (names.includes(val.toLowerCase())) {
+        setFieldValidity(nameInput, `Duplicate name "${nameInput.value}" is not allowed.`, false, true);
+        errorMessages.push(`Duplicate child/family name "${nameInput.value}" is not allowed.`);
+        childrenValid = false;
+      } else {
+        setFieldValidity(nameInput, "", true, false);
+        names.push(val.toLowerCase());
+      }
+    }
+
+    const dobInput = entry.querySelector(`input[name='child_dob_${idx}']`);
+    if (dobInput) {
+      dobInput.setAttribute("required", "required");
+      const val = dobInput.value;
+      const showInvalidStyle = showErrors || blurredFields.has(dobInput);
+      if (!val) {
+        setFieldValidity(dobInput, `Child ${idx + 1} Date of Birth is required.`, false, showInvalidStyle);
+        if (showErrors) errorMessages.push(`Child ${idx + 1} Date of Birth is required.`);
+        childrenValid = false;
+      } else {
+        setFieldValidity(dobInput, "", true, false);
+      }
+    }
+
+    const genderSelect = entry.querySelector(`select[name='child_gender_${idx}']`);
+    if (genderSelect) {
+      genderSelect.setAttribute("required", "required");
+      const showInvalidStyle = showErrors || blurredFields.has(genderSelect);
+      if (genderSelect.value === "") {
+        setFieldValidity(genderSelect, `Child ${idx + 1} Gender is required.`, false, showInvalidStyle);
+        if (showErrors) errorMessages.push(`Child ${idx + 1} Gender is required.`);
+        childrenValid = false;
+      } else {
+        setFieldValidity(genderSelect, "", true, false);
+      }
+    }
+  });
+  return childrenValid;
+}
+
+function updateSubmitButtonState(isFormValid) {
+  const submitBtn = document.querySelector("button[type='submit']");
+  if (!submitBtn) return;
+  if (isFormValid) {
+    submitBtn.style.opacity = "1";
+    submitBtn.style.cursor = "pointer";
+    submitBtn.style.pointerEvents = "auto";
+  } else {
+    submitBtn.style.opacity = "0.5";
+    submitBtn.style.cursor = "not-allowed";
+    submitBtn.style.pointerEvents = "auto";
+  }
+}
+
+function toggleFamilyFields() {
+  validateFormState();
+}
+
+function validateFormState(showErrors = false) {
+  let formIsValid = true;
+  const errorMessages = [];
+  const names = [];
+
+  // 1. Employee Name
+  const nameInput = document.querySelector("input[name='name']");
+  if (nameInput) {
+    const val = nameInput.value.trim();
+    const showInvalidStyle = showErrors || blurredFields.has(nameInput);
+    if (!val) {
+      setFieldValidity(nameInput, "Name is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Name is required.");
+      formIsValid = false;
+    } else if (!/^[A-Za-z\s]+$/.test(val)) {
+      setFieldValidity(nameInput, "Only letters and spaces are allowed for Name.", false, true);
+      errorMessages.push("Only letters and spaces are allowed for Name.");
+      formIsValid = false;
+    } else {
+      setFieldValidity(nameInput, "", true, false);
+      names.push(val.toLowerCase());
+    }
+  }
+
+  // 2. Phone
+  const phoneInput = document.querySelector("input[name='phone']");
+  if (phoneInput) {
+    const val = phoneInput.value.trim();
+    const showInvalidStyle = showErrors || blurredFields.has(phoneInput);
+    if (!val) {
+      setFieldValidity(phoneInput, "Phone number is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Phone number is required.");
+      formIsValid = false;
+    } else if (!/^\d{10}$/.test(val)) {
+      setFieldValidity(phoneInput, "Phone number must be exactly 10 digits.", false, true);
+      errorMessages.push("Phone number must be exactly 10 digits.");
+      formIsValid = false;
+    } else {
+      setFieldValidity(phoneInput, "", true, false);
+    }
+  }
+
+  // 3. Employee Code
+  const empCodeInput = document.getElementById("employeeCodeInput");
+  const empCodeError = document.getElementById("employeeCodeError");
+  if (empCodeInput) {
+    const val = empCodeInput.value.trim();
+    const showInvalidStyle = showErrors || blurredFields.has(empCodeInput);
+    if (!val) {
+      setFieldValidity(empCodeInput, "Employee Code is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Employee Code is required.");
+      formIsValid = false;
+    } else if (!/^\d+$/.test(val)) {
+      setFieldValidity(empCodeInput, "Only digits are allowed for Employee Code.", false, true);
+      if (empCodeError) empCodeError.style.display = "block";
+      errorMessages.push("Only digits are allowed for Employee Code.");
+      formIsValid = false;
+    } else {
+      setFieldValidity(empCodeInput, "", true, false);
+      if (empCodeError) empCodeError.style.display = "none";
+    }
+  }
+
+  // 4. Designation
+  const designationInput = document.getElementById("designationInput");
+  if (designationInput) {
+    const val = designationInput.value.trim();
+    const showInvalidStyle = showErrors || blurredFields.has(designationInput);
+    if (!val) {
+      setFieldValidity(designationInput, "Designation is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Designation is required.");
+      formIsValid = false;
+    } else if (!/^[A-Za-z\s]+$/.test(val)) {
+      setFieldValidity(designationInput, "Only letters and spaces allowed for Designation.", false, true);
+      errorMessages.push("Only letters and spaces allowed for Designation.");
+      formIsValid = false;
+    } else {
+      setFieldValidity(designationInput, "", true, false);
+    }
+  }
+
+  // 5. Department
+  const departmentInput = document.getElementById("departmentInput");
+  if (departmentInput) {
+    const val = departmentInput.value.trim();
+    const showInvalidStyle = showErrors || blurredFields.has(departmentInput);
+    if (!val) {
+      setFieldValidity(departmentInput, "Department is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Department is required.");
+      formIsValid = false;
+    } else if (!/^[A-Za-z\s]+$/.test(val)) {
+      setFieldValidity(departmentInput, "Only letters and spaces allowed for Department.", false, true);
+      errorMessages.push("Only letters and spaces allowed for Department.");
+      formIsValid = false;
+    } else {
+      setFieldValidity(departmentInput, "", true, false);
+    }
+  }
+
+  // 6. Email
+  const emailInput = document.querySelector("input[name='email']");
+  if (emailInput) {
+    const val = emailInput.value.trim();
+    const showInvalidStyle = showErrors || blurredFields.has(emailInput);
+    if (!val) {
+      setFieldValidity(emailInput, "Email is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Email is required.");
+      formIsValid = false;
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val)) {
+      setFieldValidity(emailInput, "Please enter a valid email address (e.g. user@example.com).", false, true);
+      errorMessages.push("Please enter a valid email address (e.g. user@example.com).");
+      formIsValid = false;
+    } else {
+      setFieldValidity(emailInput, "", true, false);
+    }
+  }
+
+  // 7. Date of Joining
+  const joiningDateInput = document.getElementById("joiningDate");
+  if (joiningDateInput) {
+    const val = joiningDateInput.value.trim();
+    const showInvalidStyle = showErrors || blurredFields.has(joiningDateInput);
+    if (!val) {
+      setFieldValidity(joiningDateInput, "Date of Joining is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Date of Joining is required.");
+      formIsValid = false;
+    } else {
+      setFieldValidity(joiningDateInput, "", true, false);
+    }
+  }
+
+  // 8. Employee DOB & Age
+  const dobInput = document.getElementById("emp_dob");
+  const empDobError = document.getElementById("emp-dob-error");
+  const ageField = document.querySelector("input[name='age']");
+  
+  let isDobValid = false;
+  
+  if (dobInput) {
+    const dob = dobInput.value;
+    const showInvalidStyle = showErrors || blurredFields.has(dobInput);
+    if (!dob) {
+      if (empDobError) empDobError.style.display = "none";
+      if (ageField) ageField.value = "";
+      setFieldValidity(dobInput, "Date of Birth is required.", false, showInvalidStyle);
+      if (showErrors) errorMessages.push("Date of Birth is required.");
+      formIsValid = false;
+    } else {
+      const numericAge = getNumericAge(dob);
+      if (numericAge < 18) {
+        if (empDobError) empDobError.style.display = "block";
+        if (ageField) ageField.value = "";
+        setFieldValidity(dobInput, "Employee must be at least 18 years old.", false, true);
+        errorMessages.push("Employee must be at least 18 years old.");
+        formIsValid = false;
+      } else {
+        if (empDobError) empDobError.style.display = "none";
+        if (ageField) ageField.value = calculateAgeString(dob);
+        setFieldValidity(dobInput, "", true, false);
+        isDobValid = true;
+      }
+    }
+  }
+
+  // 8.5 Date of Joining vs Date of Birth check
+  if (joiningDateInput && dobInput) {
+    const dojVal = joiningDateInput.value;
+    const dobVal = dobInput.value;
+    if (dojVal && dobVal) {
+      const dojDate = new Date(dojVal);
+      const dobDate = new Date(dobVal);
+      if (dojDate <= dobDate) {
+        setFieldValidity(joiningDateInput, "Date of Joining must be after Date of Birth.", false, true);
+        errorMessages.push("Date of Joining must be after Date of Birth.");
+        formIsValid = false;
+      }
+    }
+  }
+
+  // Reactive field freezing logic:
+  const genderSelect = document.querySelector("select[name='gender']");
+  const maritalStatusSelect = document.getElementById("marital_status");
+
+  if (!isDobValid) {
+    if (genderSelect) {
+      genderSelect.setAttribute("disabled", "disabled");
+      genderSelect.value = "";
+      setFieldValidity(genderSelect, "", true, false);
+    }
+    if (maritalStatusSelect) {
+      maritalStatusSelect.setAttribute("disabled", "disabled");
+      maritalStatusSelect.value = "";
+      setFieldValidity(maritalStatusSelect, "", true, false);
+    }
+    const spouseSec = document.getElementById("spouseSection");
+    if (spouseSec) spouseSec.style.display = "none";
+    const childrenSec = document.getElementById("childrenSection");
+    if (childrenSec) childrenSec.style.display = "none";
+    
+    setSpouseFieldsEmptyAndRequired(false);
+    clearChildrenList();
+  } else {
+    if (genderSelect) {
+      genderSelect.removeAttribute("disabled");
+      const showInvalidStyle = showErrors || blurredFields.has(genderSelect);
+      if (genderSelect.value === "") {
+        setFieldValidity(genderSelect, "Gender is required.", false, showInvalidStyle);
+        if (showErrors) errorMessages.push("Gender is required.");
+        formIsValid = false;
+      } else {
+        setFieldValidity(genderSelect, "", true, false);
+      }
+    }
+    if (maritalStatusSelect) {
+      maritalStatusSelect.removeAttribute("disabled");
+      const showInvalidStyle = showErrors || blurredFields.has(maritalStatusSelect);
+      if (maritalStatusSelect.value === "") {
+        setFieldValidity(maritalStatusSelect, "Marital Status is required.", false, showInvalidStyle);
+        if (showErrors) errorMessages.push("Marital Status is required.");
+        formIsValid = false;
+      } else {
+        setFieldValidity(maritalStatusSelect, "", true, false);
+      }
+    }
+  }
+
+  // 9. Spouse and Children validations
+  if (isDobValid && maritalStatusSelect && maritalStatusSelect.value === "married") {
+    const spouseSec = document.getElementById("spouseSection");
+    if (spouseSec) spouseSec.style.display = "block";
+    const childrenSec = document.getElementById("childrenSection");
+    if (childrenSec) childrenSec.style.display = "block";
+
+    // Validate Spouse Name
+    const spouseNameInput = document.querySelector("input[name='spouse_name']");
+    if (spouseNameInput) {
+      spouseNameInput.setAttribute("required", "required");
+      const val = spouseNameInput.value.trim();
+      const showInvalidStyle = showErrors || blurredFields.has(spouseNameInput);
+      if (!val) {
+        setFieldValidity(spouseNameInput, "Spouse Name is required.", false, showInvalidStyle);
+        if (showErrors) errorMessages.push("Spouse Name is required.");
+        formIsValid = false;
+      } else if (!/^[A-Za-z\s]+$/.test(val)) {
+        setFieldValidity(spouseNameInput, "Only letters and spaces allowed for Spouse Name.", false, true);
+        errorMessages.push("Only letters and spaces allowed for Spouse Name.");
+        formIsValid = false;
+      } else if (names.includes(val.toLowerCase())) {
+        setFieldValidity(spouseNameInput, `Duplicate name "${spouseNameInput.value}" is not allowed.`, false, true);
+        errorMessages.push(`Duplicate family member name "${spouseNameInput.value}" is not allowed.`);
+        formIsValid = false;
+      } else {
+        setFieldValidity(spouseNameInput, "", true, false);
+        names.push(val.toLowerCase());
+      }
+    }
+
+    // Validate Spouse DOB & Age
+    const spouseDobInput = document.getElementById("spouse_dob");
+    const spouseDobError = document.getElementById("spouse-dob-error");
+    const spouseAgeField = document.querySelector("input[name='spouse_age']");
+    const addChildBtn = document.getElementById("addChildBtn");
+    
+    let isSpouseDobValid = false;
+
+    if (spouseDobInput) {
+      spouseDobInput.setAttribute("required", "required");
+      const dob = spouseDobInput.value;
+      const showInvalidStyle = showErrors || blurredFields.has(spouseDobInput);
+      if (!dob) {
+        if (spouseDobError) spouseDobError.style.display = "none";
+        if (spouseAgeField) spouseAgeField.value = "";
+        setFieldValidity(spouseDobInput, "Spouse Date of Birth is required.", false, showInvalidStyle);
+        if (showErrors) errorMessages.push("Spouse Date of Birth is required.");
+        formIsValid = false;
+      } else {
+        const numericAge = getNumericAge(dob);
+        if (numericAge < 18) {
+          if (spouseDobError) spouseDobError.style.display = "block";
+          if (spouseAgeField) spouseAgeField.value = "";
+          setFieldValidity(spouseDobInput, "Spouse must be at least 18 years old.", false, true);
+          errorMessages.push("Spouse must be at least 18 years old.");
+          formIsValid = false;
+        } else {
+          if (spouseDobError) spouseDobError.style.display = "none";
+          if (spouseAgeField) spouseAgeField.value = calculateAgeString(dob);
+          setFieldValidity(spouseDobInput, "", true, false);
+          isSpouseDobValid = true;
+        }
+      }
+    }
+
+    // Spouse Gender
+    const spouseGenderSelect = document.querySelector("select[name='spouse_gender']");
+    if (spouseGenderSelect) {
+      spouseGenderSelect.setAttribute("required", "required");
+      const showInvalidStyle = showErrors || blurredFields.has(spouseGenderSelect);
+      if (spouseGenderSelect.value === "") {
+        setFieldValidity(spouseGenderSelect, "Spouse Gender is required.", false, showInvalidStyle);
+        if (showErrors) errorMessages.push("Spouse Gender is required.");
+        formIsValid = false;
+      } else {
+        setFieldValidity(spouseGenderSelect, "", true, false);
+      }
+    }
+
+    // Handle "Add Child" button based on Spouse DOB Validity
+    if (addChildBtn) {
+      if (isSpouseDobValid) {
+        const childCount = document.querySelectorAll("#childrenList .child-entry").length;
+        addChildBtn.disabled = childCount >= 2;
+        addChildBtn.style.opacity = childCount >= 2 ? "0.6" : "1";
+        addChildBtn.style.cursor = childCount >= 2 ? "not-allowed" : "pointer";
+      } else {
+        addChildBtn.disabled = true;
+        addChildBtn.style.opacity = "0.6";
+        addChildBtn.style.cursor = "not-allowed";
+        clearChildrenList();
+      }
+    }
+
+    // Validate Children
+    formIsValid = validateChildrenFields(showErrors, names, errorMessages) && formIsValid;
+
+  } else if (isDobValid && maritalStatusSelect && maritalStatusSelect.value === "divorced/widowed") {
+    const spouseSec = document.getElementById("spouseSection");
+    if (spouseSec) spouseSec.style.display = "none";
+    const childrenSec = document.getElementById("childrenSection");
+    if (childrenSec) childrenSec.style.display = "block";
+
+    setSpouseFieldsEmptyAndRequired(false);
+
+    const addChildBtn = document.getElementById("addChildBtn");
+    if (addChildBtn) {
+      const childCount = document.querySelectorAll("#childrenList .child-entry").length;
+      addChildBtn.disabled = childCount >= 2;
+      addChildBtn.style.opacity = childCount >= 2 ? "0.6" : "1";
+      addChildBtn.style.cursor = childCount >= 2 ? "not-allowed" : "pointer";
+    }
+
+    // Validate Children
+    formIsValid = validateChildrenFields(showErrors, names, errorMessages) && formIsValid;
+
+  } else {
+    const spouseSec = document.getElementById("spouseSection");
+    if (spouseSec) spouseSec.style.display = "none";
+    const childrenSec = document.getElementById("childrenSection");
+    if (childrenSec) childrenSec.style.display = "none";
+
+    setSpouseFieldsEmptyAndRequired(false);
+    clearChildrenList();
+  }
+
+  // 10. Parent validation (duplicate names check)
+  const parentNameInputs = document.querySelectorAll("#parentList input[name^='parent_name_']");
+  parentNameInputs.forEach(input => {
+    const val = input.value.trim();
+    if (val) {
+      if (names.includes(val.toLowerCase())) {
+        setFieldValidity(input, `Duplicate name "${input.value}" is not allowed.`, false, true);
+        errorMessages.push(`Duplicate parent/family name "${input.value}" is not allowed.`);
+        formIsValid = false;
+      } else {
+        setFieldValidity(input, "", true, false);
+        names.push(val.toLowerCase());
+      }
+    }
+  });
+
+  updateSubmitButtonState(formIsValid);
+
+  return { isValid: formIsValid, errors: errorMessages };
+}
+
+function initChildDatePicker(inputEl, index) {
+  flatpickr(inputEl, {
+    altInput: true,
+    altFormat: "d-m-Y",
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    minDate: "1935-01-01",
+    clickOpens: !isReadonly,
+    onChange: function(selectedDates, dateStr, instance) {
+      calculateChildAge(inputEl, index);
+      blurredFields.add(inputEl);
+      validateFormState();
+    },
+    onClose: function(selectedDates, dateStr, instance) {
+      calculateChildAge(inputEl, index);
+      blurredFields.add(inputEl);
+      validateFormState();
+    }
+  });
+}
+
+function addChild() {
+  const childrenList = document.getElementById("childrenList");
+  const childCount = childrenList.querySelectorAll(".child-entry").length;
+  if (childCount >= 2) return;
+
+  const nextIndex = childCount;
+
+  const div = document.createElement("div");
+  div.className = "position-relative mb-3 child-entry";
+
+  div.innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <label class="fw-bold mb-0">Child ${nextIndex + 1}</label>
+      <button type="button" class="remove-btn">🗑️</button>
+    </div>
+    <label class="fw-bold">
+      Name <span class="aadhaar-blink">(as per AADHAAR)</span>
+    </label>
+    <input name="child_name_${nextIndex}" class="form-control mb-2" placeholder="Name">
+    <label class="fw-bold">Date of Birth</label>
+    <input id="child_dob_input_${nextIndex}" name="child_dob_${nextIndex}" type="text" class="form-control mb-2" placeholder="Select Date">
+    <label class="fw-bold">Age</label>
+    <input name="child_age_${nextIndex}" class="form-control mb-2" placeholder="Age" readonly>
+    <label class="fw-bold">Gender</label>
+    <select name="child_gender_${nextIndex}" class="form-control mb-2">
+      <option value="">-- Select --</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select>
+  `;
+  childrenList.appendChild(div);
+  
+  const newInput = document.getElementById(`child_dob_input_${nextIndex}`);
+  initChildDatePicker(newInput, nextIndex);
+  
+  updateChildrenCount();
+  validateFormState();
+}
+
+function updateChildrenCount() {
+  const count = document.querySelectorAll("#childrenList .child-entry").length;
+  const totalChildrenInput = document.getElementById("total_children");
+  if (totalChildrenInput) totalChildrenInput.value = count;
+  const addChildBtn = document.getElementById("addChildBtn");
+  if (addChildBtn) addChildBtn.disabled = count >= 2;
+}
+
+function updateChildLabelsAndNames() {
+  const entries = document.querySelectorAll("#childrenList .child-entry");
+  entries.forEach((entry, idx) => {
+    entry.querySelector("label.fw-bold.mb-0").textContent = `Child ${idx + 1}`;
+    
+    const nameInput = entry.querySelector(`input[name^="child_name_"]`);
+    if (nameInput) nameInput.name = `child_name_${idx}`;
+    
+    const dobInput = entry.querySelector(`input[name^="child_dob_"]`);
+    if (dobInput) {
+      if (dobInput._flatpickr) {
+        dobInput._flatpickr.destroy();
+      }
+      dobInput.name = `child_dob_${idx}`;
+      dobInput.id = `child_dob_${idx}`;
+      initChildDatePicker(dobInput, idx);
+    }
+    
+    const ageInput = entry.querySelector(`input[name^="child_age_"]`);
+    if (ageInput) ageInput.name = `child_age_${idx}`;
+    
+    const genderSelect = entry.querySelector(`select[name^="child_gender_"]`);
+    if (genderSelect) genderSelect.name = `child_gender_${idx}`;
+    
+    if (dobInput && dobInput.value) {
+      calculateChildAge(dobInput, idx);
+    }
+  });
+}
+
+function calculateChildAge(dobInput, index) {
+  const dob = new Date(dobInput.value);
+  const today = new Date();
+  const ageField = document.querySelector(`input[name='child_age_${index}']`);
+
+  if (isNaN(dob.getTime())) {
+    if (ageField) ageField.value = "";
+    return;
+  }
+
+  if (dob > today) {
+    alert("Date of birth cannot be in the future.");
+    if (dobInput._flatpickr) {
+      dobInput._flatpickr.clear();
+    } else {
+      dobInput.value = "";
+    }
+    if (ageField) ageField.value = "";
+    return;
+  }
+
+  if (ageField) ageField.value = calculateAgeString(dobInput.value);
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  flatpickr("#emp_dob", {
+    altInput: true,
+    altFormat: "d-m-Y",
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    minDate: "1935-01-01",
+    clickOpens: !isReadonly,
+    onChange: function() {
+      blurredFields.add(document.getElementById("emp_dob"));
+      validateFormState();
+    },
+    onClose: function() {
+      blurredFields.add(document.getElementById("emp_dob"));
+      validateFormState();
+    }
+  });
+
+  flatpickr("#spouse_dob", {
+    altInput: true,
+    altFormat: "d-m-Y",
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    minDate: "1935-01-01",
+    clickOpens: !isReadonly,
+    onChange: function() {
+      blurredFields.add(document.getElementById("spouse_dob"));
+      validateFormState();
+    },
+    onClose: function() {
+      blurredFields.add(document.getElementById("spouse_dob"));
+      validateFormState();
+    }
+  });
+
+  flatpickr("#joiningDate", {
+    altInput: true,
+    altFormat: "d-m-Y",
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    minDate: "1935-01-01",
+    clickOpens: !isReadonly,
+    onChange: function() {
+      blurredFields.add(document.getElementById("joiningDate"));
+      validateFormState();
+    },
+    onClose: function() {
+      blurredFields.add(document.getElementById("joiningDate"));
+      validateFormState();
+    }
+  });
+
+  document.querySelectorAll("[name^='parent_dob_']").forEach(input => {
+    flatpickr(input, {
+      altInput: true,
+      altFormat: "d-m-Y",
+      dateFormat: "Y-m-d",
+      clickOpens: false
+    });
+  });
+
+  document.querySelectorAll("#childrenList .child-entry").forEach((entry, index) => {
+    const dobInput = entry.querySelector("input[name^='child_dob_']");
+    if (dobInput) {
+      initChildDatePicker(dobInput, index);
+    }
+  });
+
+  let formDirty = false;
+  let formSubmitted = false;
+  const form = document.getElementById("profileForm");
+
+  if (form) {
+    const empGenderSelect = document.getElementById("emp_gender");
+    const maritalStatusSelect = document.getElementById("marital_status");
+    const spouseGenderSelect = document.getElementById("spouse_gender");
+
+    if (empGenderSelect) {
+      empGenderSelect.addEventListener("change", () => {
+        if (maritalStatusSelect && maritalStatusSelect.value === "married" && spouseGenderSelect) {
+          const empGender = empGenderSelect.value;
+          if (empGender === "Male") {
+            spouseGenderSelect.value = "Female";
+          } else if (empGender === "Female") {
+            spouseGenderSelect.value = "Male";
+          }
+        }
+      });
+    }
+
+    if (maritalStatusSelect) {
+      maritalStatusSelect.addEventListener("change", () => {
+        if (maritalStatusSelect.value === "married" && empGenderSelect && spouseGenderSelect) {
+          const empGender = empGenderSelect.value;
+          if (empGender === "Male") {
+            spouseGenderSelect.value = "Female";
+          } else if (empGender === "Female") {
+            spouseGenderSelect.value = "Male";
+          }
+        }
+      });
+    }
+
+    // Set initial spouse gender default on load if married and spouse gender is empty
+    if (maritalStatusSelect && maritalStatusSelect.value === "married" && empGenderSelect && spouseGenderSelect && spouseGenderSelect.value === "") {
+      const empGender = empGenderSelect.value;
+      if (empGender === "Male") {
+        spouseGenderSelect.value = "Female";
+      } else if (empGender === "Female") {
+        spouseGenderSelect.value = "Male";
+      }
+    }
+
+    form.querySelectorAll("input,select,textarea").forEach(field => {
+      ['input', 'change'].forEach(evt => {
+        field.addEventListener(evt, () => { 
+          formDirty = true; 
+          const visible = getVisibleField(field);
+          field.classList.remove("is-invalid");
+          if (visible) visible.classList.remove("is-invalid");
+          validateFormState();
+        });
+      });
+      field.addEventListener('blur', () => {
+        blurredFields.add(field);
+        validateFormState();
+      });
+    });
+
+    const childrenList = document.getElementById("childrenList");
+    if (childrenList) {
+      ['input', 'change'].forEach(evt => {
+        childrenList.addEventListener(evt, (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+            formDirty = true;
+            const visible = getVisibleField(e.target);
+            e.target.classList.remove("is-invalid");
+            if (visible) visible.classList.remove("is-invalid");
+            validateFormState();
+          }
+        });
+      });
+      childrenList.addEventListener('focusout', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+          blurredFields.add(e.target);
+          validateFormState();
+        }
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      form.querySelectorAll("input,select,textarea").forEach(field => {
+        blurredFields.add(field);
+      });
+
+      const validation = validateFormState(true);
+
+      if (!validation.isValid) {
+        let alertMsg = "Please complete or correct the following fields:\n\n";
+        validation.errors.forEach(err => {
+          alertMsg += `- ${err}\n`;
+        });
+        alert(alertMsg);
+        form.reportValidity();
+        return;
+      }
+
+      const empCodeInput = document.getElementById("employeeCodeInput");
+      if (empCodeInput) {
+        const empCode = empCodeInput.value.trim();
+        const employeeMongoId = "{{ employee._id }}";
+        
+        try {
+          const response = await fetch(`/check_employee_id?employee_id=${encodeURIComponent(empCode)}&mongo_id=${encodeURIComponent(employeeMongoId)}`);
+          const data = await response.json();
+          
+          if (data.exists) {
+            setFieldValidity(empCodeInput, "Employee ID already exists.", false, true);
+            alert("Employee ID already exists. Please choose a different Employee Code.");
+            form.reportValidity();
+            return;
+          } else {
+            setFieldValidity(empCodeInput, "", true, false);
+          }
+        } catch (err) {
+          console.error("Error checking employee ID uniqueness:", err);
+        }
+      }
+
+      formSubmitted = true;
+      formDirty = false;
+      form.submit();
+    });
+  }
+
+  window.addEventListener("beforeunload", function(e) {
+    if (formDirty && !formSubmitted) {
+      e.preventDefault();
+      e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+    }
+  });
+
+  document.getElementById("childrenList").addEventListener("click", function(e) {
+    if (e.target.classList.contains("remove-btn")) {
+      const childDiv = e.target.closest(".child-entry");
+      if (childDiv) {
+        const dobInput = childDiv.querySelector("input[name^='child_dob_']");
+        if (dobInput && dobInput._flatpickr) {
+          dobInput._flatpickr.destroy();
+        }
+        childDiv.remove();
+        updateChildrenCount();
+        updateChildLabelsAndNames();
+        validateFormState();
+      }
+    }
+  });
+
+  // Auto-save logic
+  let saveDraftTimeout;
+  const autoSaveDraft = () => {
+    if (formSubmitted || isReadonly) return;
+    clearTimeout(saveDraftTimeout);
+    saveDraftTimeout = setTimeout(() => {
+      const formData = new FormData(form);
+      fetch('/api/save_draft', {
+        method: 'POST',
+        body: formData
+      }).then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            console.log('Draft auto-saved');
+          }
+        })
+        .catch(err => console.error('Auto-save failed:', err));
+    }, 2000);
+  };
+
+  form.addEventListener('input', () => {
+    if (!formSubmitted) autoSaveDraft();
+  });
+  form.addEventListener('change', () => {
+    if (!formSubmitted) autoSaveDraft();
+  });
+
+  validateFormState(false);
+});
+</script>
+
+{% endblock %}

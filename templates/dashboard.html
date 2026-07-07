@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Management System</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico.png') }}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .title-bar {
+      width: 100%;
+      text-align: center;
+      margin-bottom: 0.1rem;
+      font-size: 2 rem;
+      letter-spacing: 1px;
+      font-family:Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+      background: #042351;
+      color: #fff;
+      padding: 1rem 0 0.5rem 0;
+      border-radius: 6px;
+      box-shadow: 0 2px 9px 0 rgba(4,35,81,0.05);
+      /* band look */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .subtitle {
+      font-size: 1.06rem;
+      color: #fff;
+      font-weight: 500;
+      margin-top: 0.2rem;
+      text-align: center;
+      font-family: 'Times New Roman', Times, serif;
+      opacity: 0.9;
+    }
+    .notice-section {
+      min-width: 0;
+      max-width: 500px;
+      background: #f8faff;
+      border-radius: 15px;
+      box-shadow: 0 0 10px 2px rgba(4,35,81, 0.08);
+      padding: 1.5rem 2rem 1.5rem 2rem;
+      margin-right: 40px;
+      margin-left: 15px;
+      align-self: flex-start;
+      position: relative;
+      overflow: hidden; /* Keep the sweeping beam inside the box */
+    }
+    
+    /* Watermark Image */
+    .notice-section::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url("{{ url_for('static', filename='krishna_silhouette_processed.png') }}");
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 1; /* Translucency is now built into the image */
+      mix-blend-mode: multiply;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    /* Light Beam Animation */
+    .notice-section::after {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -150%;
+      width: 100%;
+      height: 200%;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.9) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: rotate(30deg);
+      animation: lightSweep 4s infinite linear;
+      mix-blend-mode: screen;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    @keyframes lightSweep {
+      0% { left: -150%; }
+      50% { left: 150%; }
+      100% { left: 150%; }
+    }
+
+    .notice-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.2em;
+      position: relative;
+      z-index: 1; /* Keep text above the watermark */
+    }
+    .notice-title {
+      color: red;
+      font-weight: bold;
+      font-size: 1.23rem;
+      letter-spacing: 2px;
+      animation: blink 2s linear infinite;
+    }
+    .notice-lang-tabs {
+      margin-left: 1.5em;
+    }
+    .notice-lang-tabs .nav-link {
+      color: #042351;
+      font-weight: 500;
+      font-size: 1.03rem;
+      padding: 0.1rem 0.8rem;
+      border: none;
+      background: none;
+      border-radius: 0.25rem !important;
+      transition: background 0.2s;
+    }
+    .notice-lang-tabs .nav-link.active {
+      background: #e3e9f7;
+      color: #d60d0d;
+      font-weight: bold;
+    }
+    .tab-content {
+      position: relative;
+      z-index: 1; /* Keep text above the watermark */
+    }
+    .notice-body {
+      color: #042351;
+      font-size: 1.03rem;
+      line-height: 1.6;
+      text-align: left;
+      margin-top: 0.35rem;
+      margin-bottom: 0;
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
+    }
+    @media (max-width: 900px) {
+      .notice-section {
+        margin-right: 0;
+        min-width: unset;
+        max-width: 100%;
+        margin-bottom: 2rem;
+      }
+      .main-flex-box {
+        flex-direction: column !important;
+        align-items: center !important;
+      }
+    }
+    /* Shift the auth-wrapper and tabs a bit right for centering with notice */
+    .main-flex-box {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: flex-start;
+      margin-top: 2.5rem;
+    }
+    .auth-wrapper {
+      margin-left: 40px;
+    }
+    @media (max-width: 900px) {
+      .auth-wrapper {
+        margin-left: 0;
+      }
+    }
+    @media (max-width: 576px) {
+      .main-flex-box {
+        margin-top: 1.5rem;
+        padding: 0 0.5rem;
+      }
+      .notice-section {
+        padding: 1rem;
+        margin-left: 0;
+        margin-right: 0;
+      }
+      .auth-wrapper {
+        max-width: 100%;
+        width: 100%;
+      }
+      .auth-box {
+        max-width: 100%;
+        padding: 1.2rem !important;
+      }
+      .title-bar {
+        font-size: 1.2rem;
+        padding: 0.75rem 0.5rem 0.4rem 0.5rem;
+      }
+      .subtitle {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<!-- made changes here-->
+<div class="title-bar">
+  HEALTH INSURANCE APPLICATION FORM
+  <div class="subtitle"><em>Healthy Employees, Strong Organisation</em></div>
+  <i class="bi bi-camera-video-fill video-icon" id="videoIcon" title="Watch Video" onclick="toggleVideoFrame()"></i>
+</div>
+
+<!-- made changes here-->
+<div id="flash-messages">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+</div>
+
+<div class="main-flex-box">
+  <!-- Notice Section (only one, to the left of the form) -->
+  <div class="notice-section">
+    <div class="notice-header-row">
+      <span class="notice-title">NOTICE</span>
+      <ul class="nav notice-lang-tabs" id="noticeLangTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="notice-en-tab" data-bs-toggle="tab" data-bs-target="#notice-en" type="button" role="tab" aria-controls="notice-en" aria-selected="true">EN</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="notice-hi-tab" data-bs-toggle="tab" data-bs-target="#notice-hi" type="button" role="tab" aria-controls="notice-hi" aria-selected="false">हि</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="notice-gu-tab" data-bs-toggle="tab" data-bs-target="#notice-gu" type="button" role="tab" aria-controls="notice-gu" aria-selected="false">ગુ</button>
+        </li>
+      </ul>
+    </div>
+    <div class="tab-content">
+      <div class="tab-pane fade show active notice-body" id="notice-en" role="tabpanel" aria-labelledby="notice-en-tab">
+        1. For any addition of names in case of marriage/newborn kids, it is requested that the concerned employee must inform the HR representative, Mr. Ashwini Gupta, within 45 days.<br><br>
+        2. Please ensure all the details in the Mediclaim form are filled correctly and carefully. If any incorrect information is provided, the entire responsibility will lie with the concerned employee.<br><br>
+        3. If you require any kind of assistance or need to clarify any doubts, please contact HR, Mr. Ashwini Gupta - 9795899812 (24*7).
+      </div>
+      <div class="tab-pane fade notice-body" id="notice-hi" role="tabpanel" aria-labelledby="notice-hi-tab">
+        1. विवाह/नवजात बच्चों के मामले में नाम जोड़ने के लिए संबंधित कर्मचारी को 45 दिनों के भीतर एचआर प्रतिनिधि श्री अश्विनी गुप्ता को सूचित करना अनिवार्य है।<br><br>
+        2. कृपया सुनिश्चित करें कि मेडिक्लेम फॉर्म में सभी विवरण सही और सावधानीपूर्वक भरे गए हैं। यदि कोई गलत जानकारी दी जाती है, तो उसकी पूरी जिम्मेदारी संबंधित कर्मचारी की होगी।<br><br>
+        3. किसी भी प्रकार की सहायता या शंका के लिए एचआर श्री अश्विनी गुप्ता - 9795899812 (24*7) से संपर्क करें।
+      </div>
+      <div class="tab-pane fade notice-body" id="notice-gu" role="tabpanel" aria-labelledby="notice-gu-tab">
+        1. લગ્ન/નવજાત બાળકોના સંદર્ભમાં નામ ઉમેરવા માટે સંબંધિત કર્મચારીને 45 દિવસની અંદર HR પ્રતિનિધિ શ્રી અશ્વિની ગુપ્તાને જાણ કરવી આવશ્યક છે.<br><br>
+        2. કૃપા કરીને ખાતરી કરો કે મેડીક્લેમ ફોર્મમાં તમામ વિગતો સાચી અને કાળજીપૂર્વક ભરવામાં આવી છે. જો કોઈ ખોટી માહિતી આપવામાં આવે છે, તો તેની સંપૂર્ણ જવાબદારી સંબંધિત કર્મચારીની હશે.<br><br>
+        3. કોઈપણ પ્રકારની મદદ અથવા શંકા માટે HR શ્રી અશ્વિની ગુપ્તા - 9795899812 (24*7) નો સંપર્ક કરો.
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Wrapper with Tabs and Forms -->
+  <div class="auth-wrapper">
+
+    <!-- Floating Tabs (no white background) -->
+    <ul class="nav nav-pills justify-content-center auth-tabs" id="authTab" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" id="register-tab" data-bs-toggle="tab" data-bs-target="#register">Register</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="login-tab" data-bs-toggle="tab" data-bs-target="#login">Login</button>
+      </li>
+    </ul>
+
+    <!-- Form Box -->
+    <div class="tab-content auth-box shadow p-4 bg-white rounded">
+      
+      <!-- Register Form -->
+      <div class="tab-pane fade show active" id="register">
+        <form method="POST" action="{{ url_for('auth.register') }}" onsubmit="return validatePhone()" autocomplete="off">
+          {{ form.csrf_token }}
+
+          <div class="mb-3">
+            <label class="form-label">Emp full name
+              <span class="text-danger aadhaar-blink">(as per AADHAAR)
+              </span>
+            </label>
+            <input type="text" name="name" class="form-control"
+                  pattern="^[A-Za-z\s]+$"
+                  title="Only letters and spaces are allowed"
+                  required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Mobile no.</label>
+            <input type="tel" name="phone" id="registerPhone" class="form-control" required pattern="\d{10}" maxlength="10">
+            <div id="phoneError" class="text-danger mt-1" style="display: none;">Phone number must be exactly 10 digits.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" id="registerPassword" class="form-control" value="123" readonly>
+            <small class="text-muted mt-1 d-block" id="registerPasswordNote"><i class="bi bi-info-circle"></i> Your password is by default 123.</small>
+          </div>
+
+          <button class="btn btn-primary w-100">Register</button>
+        </form>
+      </div>
+
+      <!-- Login Form -->
+      <div class="tab-pane fade" id="login">
+        <form method="POST" action="{{ url_for('auth.login') }}" onsubmit="return validateLogin()" autocomplete="off">
+          {{ form.csrf_token }}
+          
+          <div class="mb-3">
+            <label class="form-label">Mobile no.</label>
+            <input type="text" name="identifier" id="loginIdentifier" class="form-control" required maxlength="10" pattern="\d{10}">
+            <div id="loginPhoneError" class="text-danger mt-1" style="display: none;">If using phone, it must be exactly 10 digits.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <div class="input-eye-wrapper">
+              <input type="password" class="form-control pe-5" id="passcode" name="passcode" value="123" readonly style="padding-right: 2.5rem;">
+              <i class="bi bi-eye" id="customEyeIcon" onmousedown="showPassword()" onmouseup="hidePassword()" onmouseleave="hidePassword()" title="Hold to show password"></i>
+            </div>
+            <small class="text-muted mt-1 d-block" id="loginPasswordNote"><i class="bi bi-info-circle"></i> Your password is by default 123.</small>
+          </div>
+
+
+          <button class="btn btn-success w-100">Login</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+<!--remove me--|-->
+<div class="video-overlay" id="videoOverlay">
+  <div class="video-container">
+    <span class="video-close" onclick="toggleVideoFrame()">&times;</span>
+    <video id="tutorialVideo" src="{{ url_for('static', filename='HIAF.mp4') }}" preload="metadata"></video>
+    <div class="video-controls">
+      <button id="playPauseBtn" class="btn btn-light btn-sm" onclick="toggleVideoPlayback()">Play</button>
+    </div>
+  </div>
+</div>
+
+<<!--remove me--|-->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function validatePhone() {
+    const phoneInput = document.getElementById('registerPhone');
+    const phoneError = document.getElementById('phoneError');
+    const phone = phoneInput.value.trim();
+
+    if (!/^\d{10}$/.test(phone)) {
+      phoneError.style.display = 'block';
+      phoneInput.classList.add('is-invalid');
+      return false; // prevent form submission
+    }
+
+    phoneError.style.display = 'none';
+    phoneInput.classList.remove('is-invalid');
+    return true; // allow form submission
+  }  
+
+  function validateLogin() {
+    const idInput = document.getElementById('loginIdentifier');
+    const errorMsg = document.getElementById('loginPhoneError');
+    const identifier = idInput.value.trim();
+
+    // If identifier is all digits and length is not 10, show error
+    if (/^\d+$/.test(identifier) && identifier.length !== 10) {
+      errorMsg.style.display = 'block';
+      idInput.classList.add('is-invalid');
+      return false;
+    }
+    // If identifier is all digits and length > 10, show error
+    if (/^\d+$/.test(identifier) && identifier.length > 10) {
+      errorMsg.style.display = 'block';
+      idInput.classList.add('is-invalid');
+      return false;
+    }
+
+  errorMsg.style.display = 'none';
+  idInput.classList.remove('is-invalid');
+  return true;
+}
+
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(a => bootstrap.Alert.getOrCreateInstance(a).close())
+  }, 3000);
+
+  function toggleSelectAll(master) {
+    document.querySelectorAll('input[name="selected_ids[]"]').forEach(cb => cb.checked = master.checked);
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('show_login') === '1') new bootstrap.Tab('#login-tab').show();
+
+  function showPassword() {
+    const input = document.getElementById('passcode');
+    const icon = document.getElementById('customEyeIcon');
+    input.type = 'text';
+    icon.classList.remove('bi-eye');
+    icon.classList.add('bi-eye-slash');
+  }
+
+  function hidePassword() {
+    const input = document.getElementById('passcode');
+    const icon = document.getElementById('customEyeIcon');
+    input.type = 'password';
+    icon.classList.remove('bi-eye-slash');
+    icon.classList.add('bi-eye');
+  }
+
+  const loginIdentifier = document.getElementById('loginIdentifier');
+  const passcode = document.getElementById('passcode');
+  const loginPasswordNote = document.getElementById('loginPasswordNote');
+
+  if (loginIdentifier && passcode) {
+    loginIdentifier.addEventListener('input', async function() {
+      const phone = this.value;
+      if (phone.length === 10) {
+        try {
+          const res = await fetch(`/api/check_admin?phone=${phone}`);
+          const data = await res.json();
+          if (data.isAdmin) {
+            passcode.readOnly = false;
+            passcode.value = '';
+            loginPasswordNote.style.display = 'none';
+            return;
+          }
+        } catch (err) {
+          console.error('Error checking admin status', err);
+        }
+      }
+      // Default for non-admins or incomplete phone numbers
+      passcode.readOnly = true;
+      passcode.value = '123';
+      loginPasswordNote.style.display = 'block';
+    });
+  }
+
+  function toggleVideoFrame() {
+    const overlay = document.getElementById('videoOverlay');
+    const icon = document.querySelector('.video-icon');
+    const video = document.getElementById('tutorialVideo');
+    const btn = document.getElementById('playPauseBtn');
+
+    if (overlay.style.display === 'flex') {
+      overlay.style.display = 'none';
+      video.pause();
+      btn.textContent = 'Play';
+      icon.classList.remove('pressed');
+    } else {
+      overlay.style.display = 'flex';
+      video.pause(); // Start paused
+      btn.textContent = 'Play';
+      icon.classList.add('pressed');
+    }
+  }
+
+  function toggleVideoPlayback() {
+    const video = document.getElementById('tutorialVideo');
+    const btn = document.getElementById('playPauseBtn');
+
+    if (video.paused) {
+      video.play();
+      btn.textContent = 'Pause';
+    } else {
+      video.pause();
+      btn.textContent = 'Play';
+    }
+  } //remove me--|
+</script>
+</body>
+</html>

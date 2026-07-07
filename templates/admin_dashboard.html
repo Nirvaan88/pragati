@@ -1,0 +1,244 @@
+<!--admin_dashboard.html-->
+{% extends 'base.html' %}
+{% set hide_nav_title = True %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .incomplete-row > td {
+    background-color: rgba(255, 182, 193, 0.299) !important;
+  }
+  @media (max-width: 768px) {
+    .dashboard-wrapper {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+    .dashboard-wrapper h2 {
+      font-size: 1.4rem;
+    }
+    .d-flex.justify-content-between {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+    .d-flex.flex-wrap.gap-2.align-items-center {
+      justify-content: center;
+    }
+    .action-buttons, .d-flex.justify-content-center.flex-wrap.gap-1 {
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .action-buttons .btn, .d-flex.justify-content-center.flex-wrap.gap-1 .btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+  @media (max-width: 576px) {
+    .dashboard-wrapper {
+      padding-left: 0.25rem !important;
+      padding-right: 0.25rem !important;
+    }
+  }
+</style>
+<div class="dashboard-wrapper container-fluid mt-0 pt-2 px-2 px-md-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 w-100">
+    <h2 class="fw-bold mb-2" style="background: transparent; color: inherit;">Employee List</h2>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <form id="exportForm" method="POST" action="{{ url_for('export.export_handler') }}">
+        {{ form.hidden_tag() }}
+        <input type="hidden" name="export_type" id="exportType">
+        <input type="hidden" name="search" value="{{ request.args.get('search', '') }}">
+        <input type="hidden" name="selected_ids" id="selectedIds">
+
+        <button type="button" class="btn btn-export btn-sm" onclick="exportData('csv')">Export (CSV)</button>
+        <button type="button" class="btn btn-export btn-sm" onclick="exportData('excel')">Export (Excel)</button>
+      </form>
+
+      <div class="dropdown">
+        <button class="gear-btn" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fas fa-cog fa-lg"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown">
+          <li><a class="dropdown-item" href="{{ url_for('admin.admin_change_password') }}">Change Password</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <form class="row g-2 mb-3" method="POST" action="{{ url_for('admin.admin_dashboard') }}">
+    {{ form.hidden_tag() }}
+    <div class="col-sm-8 col-md-10">
+      <input type="text" name="search" class="form-control"
+        placeholder="Search (code, name, email, phone...)"
+        value="{{ request.args.get('search', '') }}">
+    </div>
+    <div class="col-sm-4 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-search w-100">Search</button>
+      <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary w-100">Reset</a>
+    </div>
+  </form>
+
+  <!-- Bulk Delete Form -->
+  <form method="POST" action="{{ url_for('admin.delete_selected') }}" id="bulkDeleteForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  </form>
+
+  <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle text-center">
+        <thead class="table-light">
+          <tr>
+            <th><input type="checkbox" onclick="toggleAll(this)"></th>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Designation</th>
+            <th>Department</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for employee in employees %}
+          <tr {% if not employee.get('details_completed', False) %}class="incomplete-row"{% endif %}>
+            <td>
+              {% if employee.employee_id and employee.employee_id != 'admin' %}
+              <input type="checkbox" name="selected_ids[]" value="{{ employee._id }}" class="form-check-input select-checkbox" onchange="updateSelection()" form="bulkDeleteForm">
+              {% else %}
+              <input type="checkbox" disabled>
+              {% endif %}
+            </td>
+            <td>{{ employee.employee_id or '' }}</td>
+            <td>{{ employee.name }}</td>
+            <td>{{ employee.designation }}</td>
+            <td>{{ employee.department }}</td>
+            <td>{{ employee.phone }}</td>
+            <td>{{ employee.email }}</td>
+            <td><div class="d-flex justify-content-center flex-wrap gap-1">
+
+                  {% set emp_id_param = employee._id %}
+                  <a href="{{ url_for('main.employee_detail',
+                          employee_id=emp_id_param) }}"
+                    class="btn btn-view btn-sm">
+                      View
+                  </a>
+
+                  {% if employee.employee_id != 'admin' %}
+                  <form method="POST"
+                        action="{{ url_for('admin.delete_employee',
+                                employee_id=emp_id_param) }}"
+                        style="display:inline;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit"
+                              class="btn btn-delete btn-sm"
+                              onclick="return confirm('Delete this employee?');">
+                          Delete
+                      </button>
+                  </form>
+                  {% endif %}
+
+              </div>
+          </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bulk Delete Button -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+      <div>
+        <button type="submit" id="bulkDeleteBtn" class="btn btn-delete" disabled form="bulkDeleteForm">Delete Selected</button>
+        <span id="selectedCount" class="ms-2 text-muted">0 selected</span>
+      </div>
+      <div>
+        <span class="fw-bold me-2" style="color: rgba(33, 37, 41, 0.37);">Total Entries: {{ employees|length }}</span>
+      </div>
+    </div>
+
+  <!-- Individual Delete Forms (Separate from Bulk Form) 
+  {% for employee in employees %}
+    {% if employee.employee_id and employee.employee_id != 'admin' %}
+      <form method="POST"
+            action="{{ url_for('admin.delete_employee', employee_id=employee.employee_id) }}"
+            class="delete-form d-none">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      </form>
+    {% endif %}
+  {% endfor %}-->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function exportData(type) {
+    const form = document.getElementById('exportForm');
+    document.getElementById('exportType').value = type;
+    const selectedCheckboxes = document.querySelectorAll('.select-checkbox:checked');
+    const ids = Array.from(selectedCheckboxes).map(cb => cb.value);
+    document.getElementById('selectedIds').value = ids.join(',');
+    form.submit();
+  }
+
+  function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('input.select-checkbox:not(:disabled)');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateSelection();
+  }
+
+  function updateSelection() {
+    const checked = document.querySelectorAll('.select-checkbox:checked').length;
+    const btn = document.getElementById('bulkDeleteBtn');
+    document.getElementById('selectedCount').innerText = `${checked} selected`;
+    btn.disabled = checked === 0;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // ✅ BULK DELETE CONFIRMATION
+    const bulkForm = document.getElementById('bulkDeleteForm');
+    if (bulkForm) {
+      bulkForm.addEventListener('submit', function (e) {
+        const checked = document.querySelectorAll('.select-checkbox:checked').length;
+        if (checked === 0) {
+          alert("Please select at least one employee to delete.");
+          e.preventDefault();
+          return;
+        }
+        if (!confirm("Are you sure you want to delete the selected employees?")) {
+          e.preventDefault();
+          return;
+        }
+        if (!confirm("This action is irreversible. Do you really want to proceed?")) {
+          e.preventDefault();
+        }
+      });
+    }
+
+    // ✅ INDIVIDUAL DELETE BUTTON HOOKUP
+    /*const rows = document.querySelectorAll('tbody tr');
+    rows.forEach((row, index) => {
+      const deleteForm = document.querySelectorAll('form.delete-form')[index];
+      if (deleteForm) {
+        const btn = document.createElement('button');
+        btn.type = 'submit';
+        btn.className = 'btn btn-delete btn-sm';
+        btn.textContent = 'Delete';
+        btn.addEventListener('click', function (e) {
+          if (!confirm("Delete this employee?")) {
+            e.preventDefault();
+          }
+        });
+        const actionsTd = row.querySelectorAll('td')[7];
+        if (actionsTd) {
+          actionsTd.querySelector('.d-flex').appendChild(deleteForm);
+          deleteForm.classList.remove('d-none');
+          deleteForm.appendChild(btn);
+        }
+      }
+    });*/
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Details{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f5f6fa;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)), url("{{ url_for('static', filename='health_bg.png') }}");
+        background-repeat: repeat;
+        background-size: 400px;
+        background-attachment: fixed;
+    }
+    .center-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        padding-left: 2rem;
+        min-height: 100vh;
+        padding-top: 3rem;
+    }
+    .form-card {
+        width: 100%;
+        max-width: 900px;
+        position: relative;
+    }
+    .logout-icon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        font-size: 1.2rem;
+        padding: 6px 10px;
+        color: #dc3545;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .logout-icon:active,
+    .remove-icon:active {
+        transform: scale(0.9);
+        box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.3);
+    }
+    .remove-icon {
+        position: absolute;
+        bottom: 8px;
+        right: 10px;
+        font-size: 1.1rem;
+        color: #dc3545;
+        cursor: pointer;
+    }
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 3px;
+        margin-top: 0rem;
+    }
+    @media (max-width: 768px) {
+        .center-container {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            padding-top: 1.5rem;
+        }
+        .form-card {
+            max-width: 100%;
+        }
+        .action-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .action-buttons .btn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+    @media (max-width: 576px) {
+        .center-container {
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+            padding-top: 1rem;
+        }
+        .card-body {
+            padding: 0.75rem;
+        }
+    }
+</style>
+
+<div class="center-container">
+
+    <!-- Employee Details -->
+    <div class="form-card">
+        <h3 class="mb-2">Employee Details:</h3>
+
+        {% if session.get('role') == 'user' %}
+            <a href="{{ url_for('auth.logout') }}" class="logout-icon" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        {% endif %}
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-2"><strong>Emp ID:</strong> {{ employee.employee_id }}</div>
+                            <div class="mb-2"><strong>Department:</strong> {{ employee.department }}</div>
+                            <div class="mb-2"><strong>Gender:</strong> {{ employee.gender }}</div>
+                            <div class="mb-2"><strong>Date of Joining:</strong> {{ employee.date_of_joining|datetime_format }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2"><strong>Name:</strong> {{ employee.name }}</div>
+                            <div class="mb-2"><strong>Phone:</strong> {{ employee.phone }}</div>
+                            <div class="mb-2"><strong>Date of Birth:</strong> {{ employee.dob|datetime_format }}</div>
+                            <div class="mb-2"><strong>Marital Status:</strong> {{ employee.marital_status }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2"><strong>Designation:</strong> {{ employee.designation }}</div>
+                            <div class="mb-2"><strong>Email:</strong> {{ employee.email }}</div>
+                            <div class="mb-2"><strong>Age:</strong> {{ employee.age }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Family Section -->
+    {% if employee.family_members %}
+    <div class="form-card mt-4">
+        <h3 class="mb-2">Family Details:</h3>
+        {% for member in employee.family_members %}
+        {% set rel = member.relationship.lower() %}
+        {% set child_relationship = "son" if member.gender == "Male" else "daughter" if member.gender == "Female" else "child" %}
+ 
+        <div class="card mb-2 position-relative family-card">
+            <div class="card-body">
+
+                {% if rel == 'spouse' %}
+                    {% set spouse_relationship = "Wife" if employee.gender|lower == "male" else "Husband" if employee.gender|lower == "female" else ("Husband" if member.gender == "Male" else "Wife" if member.gender == "Female" else "Spouse") %}
+                    <div class="row">
+                        <div class="col-md-4"><strong>Relationship:</strong> {{ spouse_relationship }}</div>
+                        <div class="col-md-4"><strong>Name:</strong> {{ member.name }}</div>
+                        <div class="col-md-4"><strong>Date of Birth:</strong> {{ member.date_of_birth|datetime_format if member.date_of_birth else 'N/A' }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-4"><strong>Age:</strong> {{ member.age or 'N/A' }}</div>
+                        <div class="col-md-4"></div>
+                    </div>
+
+                {% elif rel in ['son', 'daughter', 'child'] %}
+                    <div class="row">
+                        <div class="col-md-4"><strong>Relationship:</strong> {{ child_relationship|capitalize }}</div>
+                        <div class="col-md-4"><strong>Name:</strong> {{ member.name }}</div>
+                        <div class="col-md-4"><strong>Date of Birth:</strong> {{ member.date_of_birth|datetime_format if member.date_of_birth else 'N/A' }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-4"><strong>Age:</strong> {{ member.age or 'N/A' }}</div>
+                        <div class="col-md-4"></div>
+                        <div class="col-md-4"></div>
+                    </div>
+
+                {% else %}
+                    <div class="row">
+                        <div class="col-md-4"><strong>Relationship:</strong> {{ member.relationship }}</div>
+                        <div class="col-md-4"><strong>Name:</strong> {{ member.name }}</div>
+                        <div class="col-md-4"><strong>Date of Birth:</strong> {{ member.date_of_birth|datetime_format if member.date_of_birth else 'N/A' }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-4"><strong>Age:</strong> {{ member.age or 'N/A' }}</div>
+                        <div class="col-md-4"><strong>Gender:</strong> {{ member.gender or 'N/A' }}</div>
+                        <div class="col-md-4"></div>
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+
+    <!-- Admin-only Edit Actions -->
+    {% if session.get('role') == 'admin' %}
+    <div class="form-card mt-4">
+        <div class="action-buttons">
+            <a href="{{ url_for('main.complete_profile', employee_id=employee._id) }}" class="btn btn-primary">Edit Details</a>
+            <a href="{{ url_for('admin.change_employee_password', employee_id=employee.employee_id) }}" class="btn btn-warning">Change Password</a>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+        </div>
+    </div>
+    {% endif %}
+
+  </div><!-- End shifted block -->
+</div>
+{% endblock %}

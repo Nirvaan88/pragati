@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIAF</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico.png') }}">
+    <style>
+        body {
+            margin: 0;
+            background-color: #01153a; /* Dark blue */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #logo {
+            max-width: min(600px, 90vw);
+            width: auto;
+            transition: opacity 1s ease-out;
+        }
+
+        .fade-out {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <img src="{{ url_for('static', filename='kisnarbg.png') }}" alt="Logo" id="logo">
+
+    <script>
+        setTimeout(() => {
+            document.getElementById('logo').classList.add('fade-out');
+        }, 900); // Start fade-out before redirect
+
+        setTimeout(() => {
+            window.location.href = "{{ url_for('auth.dashboard') }}";
+        }, 1000); // Redirect after 5 seconds
+    </script>
+</body>
+</html>
